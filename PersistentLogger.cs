@@ -22,7 +22,7 @@
 
 using System;
 using System.IO;
-using System.Collections.Generic;
+using System.Collections;
 using System.Threading;
 
 namespace PersistentLogger {
@@ -34,10 +34,9 @@ namespace PersistentLogger {
 
         static PLog() {
             //set default log directory to personal folder
-            LogDirectory = System.Environment.GetFolderPath(System.Environment.SpecialFolder.Personal) + "/logging";
+            LogDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Personal) + "/logging";
             //set default log path
             LogPath = "log.txt";
-            _queue = new LinkedList<string>();
         }
 
         public static void Info(string tag, string message) {
@@ -78,6 +77,7 @@ namespace PersistentLogger {
         //determine if the message should be skipped or a retry should occur post-timeout
         //if a throw is not happening
         public static bool RetryIfTimeout { get; set; }
+
         static LogWritingManager() {
             _queue = new Queue();
             _writeLock = new object();
@@ -92,7 +92,7 @@ namespace PersistentLogger {
             lock (_queue) {
                 _queue.Enqueue(logString);
             }
-            Threadpool.QueueUserWorkItem(o => Write(writeDir, writePath));
+            ThreadPool.QueueUserWorkItem(o => Write(writeDir, writePath));
         }
         static string DequeueLog() {
             string log;
@@ -109,14 +109,14 @@ namespace PersistentLogger {
             //wait on the write lock for 1 second then time out
             //this will ensure that the logger does not hang on
             //a bad write
-            if (!Monitor.TryEnter(_writeLock), 1000) {
+            if (!Monitor.TryEnter(_writeLock, TimeoutPeriod)) {
                 if (ThrowIfTimeout) {
                     throw new TimeoutException("Failed to write log message");
                 } else {
                     //queue a retry. This will free up this thread and try
                     //again later on a different thread
-                    if (RetryIfTimeout { get; set; }) {
-                        Threadpool.QueueUserWorkItem(o => Write(writeDir, writePath);
+                    if (RetryIfTimeout) {
+                        ThreadPool.QueueUserWorkItem(o => Write(writeDir, writePath));
                     } else {
                         //remove the log message if it failed and not retrying
                         //this will ensure that there are no more orphaned log messages
