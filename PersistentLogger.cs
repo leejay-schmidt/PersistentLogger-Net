@@ -69,7 +69,7 @@ namespace PersistentLogger {
 
     static class LogWritingManager {
         static Queue _queue;
-        static object _writeLock;
+        static readonly object _writeLock;
         //if a timeout occurs in writing logs out, determine if exception will be thrown
         public static bool ThrowIfTimeout { get; set; }
         //determines the timeout period for waiting on the available writer
@@ -92,7 +92,7 @@ namespace PersistentLogger {
             lock (_queue) {
                 _queue.Enqueue(logString);
             }
-            ThreadPool.QueueUserWorkItem(o => Write(writeDir, writePath));
+            ThreadPool.QueueUserWorkItem(o => WriteLog(writeDir, writePath));
         }
         static string DequeueLog() {
             string log;
@@ -116,7 +116,7 @@ namespace PersistentLogger {
                     //queue a retry. This will free up this thread and try
                     //again later on a different thread
                     if (RetryIfTimeout) {
-                        ThreadPool.QueueUserWorkItem(o => Write(writeDir, writePath));
+                        ThreadPool.QueueUserWorkItem(o => WriteLog(writeDir, writePath));
                     } else {
                         //remove the log message if it failed and not retrying
                         //this will ensure that there are no more orphaned log messages
